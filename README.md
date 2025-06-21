@@ -1,12 +1,6 @@
 Tokens (t) = D(t*B(d))
 
-Daily Bonus(x) = 2x,            monday
-.
-.                x^(1.5),       wednesday
-.
-.                x+|sinx|,      friday
-.
-.                x^2,           sunday
+Daily Bonus(x) = 2x when monday. x^(1.5) when wednesday, x+|sinx| when friday, x^2 when sunday
 
 Base Multiplier (d) = (1 + 1%)^d
 
