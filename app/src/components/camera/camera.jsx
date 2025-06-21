@@ -61,9 +61,16 @@ const Camera = () => {
       const noseToForehead = noseY - foreheadY;
       const ratio = noseToForehead / noseToChin;
 
-      if (ratio > 0.6) setDirection("Looking Up");
-      else if (ratio < 0.4) setDirection("Looking Down");
-      else setDirection("Looking Straight");
+      let currentDirection = "Looking Laptop";
+      if (ratio > 1.9) currentDirection = "Looking Down";
+      else if (ratio < 1.7) currentDirection = "Looking Laptop";
+
+      if (ratio > 1.9) setDirection("Looking Down");
+      else if (ratio < 1.7) setDirection("Looking Laptop");
+      else setDirection("Looking Laptop");
+
+      console.log("Ratio:", ratio);
+      console.log("Direction:", currentDirection);
 
       ctx.restore();
     });
