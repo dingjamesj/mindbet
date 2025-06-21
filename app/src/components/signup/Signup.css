@@ -1,0 +1,17 @@
+:root {
+
+    --min-padding: 20px;
+
+}
+
+.signup-container {
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #000a91 0%, #0084ff 100%);
+    padding: var(--min-padding);
+    color: #ffffff;
+
+}
