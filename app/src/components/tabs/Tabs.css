@@ -1,0 +1,10 @@
+.Tabs {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	background-color: #222;
+
+	.MuiToggleButton-primary {
+		color: white;
+	}
+}
