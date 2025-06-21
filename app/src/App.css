@@ -1,3 +1,17 @@
 .App {
-  text-align: center;
+	display: flex;
+	text-align: center;
+	color: white;
+	height: 100vh;
+
+	.sideBar {
+		flex: 1;
+		background-color: #222;
+		height: auto;
+	}
+
+	.mainWindow {
+		flex: 4;
+		background-color: #111;
+	}
 }
