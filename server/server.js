@@ -1,4 +1,4 @@
 console.log("Server started");
 
-const { ronsonTestFunctions } = require('./runfiles/ronson');
-ronsonTestFunctions();
+const { jamesTestFunctions } = require('./runfiles/james');
+jamesTestFunctions();
