@@ -1,6 +1,5 @@
 const ronsonTestFunctions = () => {
-	console.log('meow');
-	console.log("woof");
+	console.log("meow");
 }
 
 module.exports.ronsonTestFunctions = ronsonTestFunctions;
