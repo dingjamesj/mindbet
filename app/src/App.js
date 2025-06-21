@@ -1,6 +1,6 @@
 import "./App.css";
 import Stopwatch from "./components/stopwatch/Stopwatch";
-import Camera from "./components/camera/Camera";
+import Camera from "./components/camera/Cam";
 function App() {
   return (
     <div className="App">
