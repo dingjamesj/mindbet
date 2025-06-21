@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 
-const Camera = () => {
+const Camera = ({ onDirectionChange }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [direction, setDirection] = useState("Loading...");
@@ -65,12 +65,8 @@ const Camera = () => {
       if (ratio > 1.9) currentDirection = "Looking Down";
       else if (ratio < 1.7) currentDirection = "Looking Laptop";
 
-      if (ratio > 1.9) setDirection("Looking Down");
-      else if (ratio < 1.7) setDirection("Looking Laptop");
-      else setDirection("Looking Laptop");
-
-      console.log("Ratio:", ratio);
-      console.log("Direction:", currentDirection);
+      setDirection(currentDirection);
+      if (onDirectionChange) onDirectionChange(currentDirection);
 
       ctx.restore();
     });

@@ -1,35 +1,21 @@
 import React, { useState, useEffect } from "react";
 import "./Stopwatch.css";
 
-const Stopwatch = () => {
-  // state for storing time
+const Stopwatch = ({ running }) => {
   const [time, setTime] = useState(0);
-
-  // state to check if stopwatch is running
-  const [isRunning, setIsRunning] = useState(false);
-
+  console.log(running);
   useEffect(() => {
     let intervalId;
-    if (isRunning) {
-      intervalId = setInterval(() => setTime(time + 1), 10);
+    if (running) {
+      intervalId = setInterval(() => setTime((t) => t + 1), 10); // ✅ correct update
     }
     return () => clearInterval(intervalId);
-  }, [isRunning, time]);
+  }, [running]);
 
   const hours = Math.floor(time / 360000);
-  const minutes = Math.floor((time & 360000) / 6000);
+  const minutes = Math.floor((time % 360000) / 6000);
   const seconds = Math.floor((time % 6000) / 100);
   const milliseconds = time % 100;
-
-  // Method: start/stop timer
-  const startAndStop = () => {
-    setIsRunning(!isRunning);
-  };
-
-  // Method: reset timer
-  const reset = () => {
-    setTime(0);
-  };
 
   return (
     <div className="stopwatch-container">
@@ -38,14 +24,6 @@ const Stopwatch = () => {
         {seconds.toString().padStart(2, "0")}:
         {milliseconds.toString().padStart(2, "0")}
       </p>
-      <div className="stopwatch-buttons">
-        <button className="stopwatch-button" onClick={startAndStop}>
-          {isRunning ? "Stop" : "Start"}
-        </button>
-        <button className="stopwatch-button" onClick={reset}>
-          Reset
-        </button>
-      </div>
     </div>
   );
 };
