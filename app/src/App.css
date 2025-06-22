@@ -3,15 +3,35 @@
 	text-align: center;
 	color: white;
 	height: 100vh;
+	background-color: #111;
 
-	.sideBar {
-		flex: 1;
-		background-color: #222;
-		height: auto;
-	}
+	.mainWrapper {
+		display: flex;
+		width: 100%;
 
-	.mainWindow {
-		flex: 4;
-		background-color: #111;
+		.sideBar {
+			flex: 1;
+			background-color: #222;
+			height: auto;
+		}
+
+		.mainPanel {
+			flex: 4;
+		}
+
+		.playContainer {
+			height: 100%;
+			display: flex;
+
+			.mainPlayPanel {
+				flex: 3
+			}
+
+			.leaderboardSideBar {
+				flex: 1;
+				background-color: #161616;
+				padding: 16px;
+			}
+		}
 	}
 }
