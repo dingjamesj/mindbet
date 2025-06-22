@@ -1,16 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./Stopwatch.css";
 
-const Stopwatch = ({ running }) => {
-  const [time, setTime] = useState(0);
-  console.log(running);
+const Stopwatch = ({ running, time, setTime }) => {
+  const intervalRef = useRef(null);
+
   useEffect(() => {
-    let intervalId;
     if (running) {
-      intervalId = setInterval(() => setTime((t) => t + 1), 10); // ✅ correct update
+      if (!intervalRef.current) {
+        intervalRef.current = setInterval(() => setTime((t) => t + 1), 10);
+      }
+    } else {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
-    return () => clearInterval(intervalId);
-  }, [running]);
+    return () => clearInterval(intervalRef.current);
+  }, [running, setTime]);
 
   const hours = Math.floor(time / 360000);
   const minutes = Math.floor((time % 360000) / 6000);
