@@ -6,7 +6,9 @@ import Tabs from "./components/tabs/Tabs";
 
 function App() {
   const [currentTab, setCurrentTab] = useState("timer");
-  const [running, setRunning] = useState(false);
+  const [isLookingDown, setIsLookingDown] = useState(false);
+
+  const [time, setTime] = useState(0);
 
   return (
     <div className="App">
@@ -16,8 +18,8 @@ function App() {
       <div className="mainWindow">
         {currentTab === "timer" ? (
           <div>
-            <Stopwatch running={running} />
-            <Cam />
+            <Stopwatch running={isLookingDown} time={time} setTime={setTime} />
+            <Cam onGazeChange={setIsLookingDown} />
           </div>
         ) : (
           <h1>put all the gambling stuff here</h1>

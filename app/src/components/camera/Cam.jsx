@@ -5,28 +5,42 @@ import {
   DrawingUtils,
 } from "@mediapipe/tasks-vision";
 
-const Cam = () => {
+const Cam = ({ onGazeChange }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const faceLandmarkerRef = useRef(null);
   const animationFrameId = useRef(null);
+  const lastRunTimeRef = useRef(0); // NEW: to throttle detection
   const [gazeStatus, setGazeStatus] = useState("Loading...");
+  const prevGaze = useRef(null);
+  const recentRatios = useRef([]);
+
+  const SMOOTHING_WINDOW = 5;
+  const GAZE_THRESHOLD = 0.4;
+  const DETECTION_INTERVAL = 150; // milliseconds
 
   const getAverageY = (landmarks, indices) =>
     indices.reduce((sum, i) => sum + landmarks[i].y, 0) / indices.length;
 
-  const isLookingDown = (landmarks) => {
-    const eyeY = getAverageY(landmarks, [33, 133]); // Approximate left + right eye centers
+  const getGazeRatio = (landmarks) => {
+    const eyeY = getAverageY(landmarks, [33, 133]);
     const noseY = landmarks[1].y;
     const chinY = landmarks[152].y;
-
     const eyeToChin = chinY - eyeY;
     const eyeToNose = noseY - eyeY;
-    const ratio = eyeToNose / eyeToChin;
+    return eyeToNose / eyeToChin;
+  };
 
-    console.log(ratio);
-
-    return ratio > 0.5; // Tune threshold based on tests
+  const isLookingDownSmoothed = (newRatio) => {
+    recentRatios.current.push(newRatio);
+    if (recentRatios.current.length > SMOOTHING_WINDOW) {
+      recentRatios.current.shift();
+    }
+    const avgRatio =
+      recentRatios.current.reduce((sum, r) => sum + r, 0) /
+      recentRatios.current.length;
+    console.log("avgRatio:", avgRatio.toFixed(3));
+    return avgRatio > GAZE_THRESHOLD;
   };
 
   useEffect(() => {
@@ -35,8 +49,19 @@ const Cam = () => {
         video: true,
         audio: false,
       });
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+
+        return new Promise((resolve) => {
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play().catch((err) => {
+              console.warn("Video play failed:", err);
+            });
+            resolve();
+          };
+        });
+      }
     };
 
     const loadFaceLandmarker = async () => {
@@ -63,51 +88,64 @@ const Cam = () => {
       const drawUtils = new DrawingUtils(canvasCtx);
 
       const detect = async () => {
-        if (!faceLandmarkerRef.current) return;
+        const now = performance.now();
 
-        const detections = await faceLandmarkerRef.current.detectForVideo(
-          videoRef.current,
-          performance.now()
-        );
+        if (
+          faceLandmarkerRef.current &&
+          videoRef.current &&
+          now - lastRunTimeRef.current > DETECTION_INTERVAL
+        ) {
+          const detections = await faceLandmarkerRef.current.detectForVideo(
+            videoRef.current,
+            now
+          );
+          lastRunTimeRef.current = now;
 
-        canvasCtx.clearRect(
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        );
-
-        // Mirror both video and landmarks
-        canvasCtx.save();
-        canvasCtx.scale(-1, 1);
-        canvasCtx.translate(-canvasRef.current.width, 0);
-
-        // Draw video
-        canvasCtx.drawImage(
-          videoRef.current,
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        );
-
-        if (detections.faceLandmarks.length > 0) {
-          const landmarks = detections.faceLandmarks[0];
-          drawUtils.drawConnectors(
-            landmarks,
-            FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-            {
-              color: "#00FF00",
-              lineWidth: 1,
-            }
+          canvasCtx.clearRect(
+            0,
+            0,
+            canvasRef.current.width,
+            canvasRef.current.height
           );
 
-          // Gaze logic still based on original landmark coordinates
-          const lookingDown = isLookingDown(landmarks);
-          setGazeStatus(lookingDown ? "Looking Down" : "Looking Forward");
-        }
+          canvasCtx.save();
+          canvasCtx.scale(-1, 1);
+          canvasCtx.translate(-canvasRef.current.width, 0);
 
-        canvasCtx.restore(); // Restore non-mirrored state
+          canvasCtx.drawImage(
+            videoRef.current,
+            0,
+            0,
+            canvasRef.current.width,
+            canvasRef.current.height
+          );
+
+          if (detections.faceLandmarks.length > 0) {
+            const landmarks = detections.faceLandmarks[0];
+
+            drawUtils.drawConnectors(
+              landmarks,
+              FaceLandmarker.FACE_LANDMARKS_TESSELATION,
+              {
+                color: "#00FF00",
+                lineWidth: 1,
+              }
+            );
+
+            const ratio = getGazeRatio(landmarks);
+            const lookingDown = isLookingDownSmoothed(ratio);
+            setGazeStatus(lookingDown ? "Looking Down" : "Looking Forward");
+
+            if (lookingDown !== prevGaze.current) {
+              prevGaze.current = lookingDown;
+              if (typeof onGazeChange === "function") {
+                onGazeChange(lookingDown);
+              }
+            }
+          }
+
+          canvasCtx.restore();
+        }
 
         animationFrameId.current = requestAnimationFrame(detect);
       };
@@ -123,8 +161,8 @@ const Cam = () => {
 
     return () => {
       cancelAnimationFrame(animationFrameId.current);
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      if (videoRef.current?.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
       }
     };
   }, []);
@@ -139,7 +177,7 @@ const Cam = () => {
         height={480}
         style={{
           border: "1px solid black",
-          transform: "scaleX(1)", // mirror
+          transform: "scaleX(1)",
         }}
       />
     </div>
