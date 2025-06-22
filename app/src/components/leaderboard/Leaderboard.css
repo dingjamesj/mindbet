@@ -1,0 +1,22 @@
+.mainWrapper {
+	text-align: center;
+	color: white;
+
+	.rowFlexContainer {
+		display: flex;
+		margin: auto;
+	}
+
+	.columnFlexContainer {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.positionColumn {
+		padding-right: 32px;
+	}
+
+	.nameColumn {
+		padding-right: 64px;
+	}
+}
