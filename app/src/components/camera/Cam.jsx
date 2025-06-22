@@ -1,132 +1,117 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
+import {
+  FaceLandmarker,
+  FilesetResolver,
+  DrawingUtils,
+} from "@mediapipe/tasks-vision";
 
-const Camera = ({ onDirectionChange }) => {
+const Cam = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [direction, setDirection] = useState("Loading...");
+  const faceLandmarkerRef = useRef(null);
+  const animationFrameId = useRef(null);
 
   useEffect(() => {
-    if (!window.FaceMesh || !window.Camera) {
-      console.error("MediaPipe not loaded.");
-      return;
-    }
+    const initCamera = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+    };
 
-    const faceMesh = new window.FaceMesh({
-      locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-    });
-
-    faceMesh.setOptions({
-      maxNumFaces: 1,
-      refineLandmarks: false,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-
-    faceMesh.onResults((results) => {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      ctx.save();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (
-        !results.multiFaceLandmarks ||
-        results.multiFaceLandmarks.length === 0
-      ) {
-        ctx.restore();
-        return;
-      }
-
-      const landmarks = results.multiFaceLandmarks[0];
-
-      // Draw green dots
-      ctx.fillStyle = "lime";
-      for (const point of landmarks) {
-        const x = point.x * canvas.width;
-        const y = point.y * canvas.height;
-
-        if (x >= 0 && y >= 0 && x <= canvas.width && y <= canvas.height) {
-          ctx.beginPath();
-          ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
-          ctx.fill();
+    const loadFaceLandmarker = async () => {
+      const filesetResolver = await FilesetResolver.forVisionTasks(
+        // Loads from CDN
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
+      );
+      faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(
+        filesetResolver,
+        {
+          baseOptions: {
+            modelAssetPath:
+              "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+          },
+          outputFaceBlendshapes: false,
+          runningMode: "VIDEO",
+          numFaces: 1,
         }
-      }
+      );
+    };
 
-      // Head direction detection
-      const noseY = landmarks[1].y;
-      const chinY = landmarks[152].y;
-      const foreheadY = landmarks[10].y;
+    const startDetection = async () => {
+      if (!videoRef.current || !canvasRef.current) return;
 
-      const noseToChin = chinY - noseY;
-      const noseToForehead = noseY - foreheadY;
-      const ratio = noseToForehead / noseToChin;
+      const canvasCtx = canvasRef.current.getContext("2d");
+      const drawUtils = new DrawingUtils(canvasCtx);
 
-      let currentDirection = "Looking Laptop";
-      if (ratio > 1.9) currentDirection = "Looking Down";
-      else if (ratio < 1.7) currentDirection = "Looking Laptop";
+      const detect = async () => {
+        if (!faceLandmarkerRef.current) return;
 
-      setDirection(currentDirection);
-      if (onDirectionChange) onDirectionChange(currentDirection);
+        const detections = await faceLandmarkerRef.current.detectForVideo(
+          videoRef.current,
+          performance.now()
+        );
 
-      ctx.restore();
-    });
+        canvasCtx.clearRect(
+          0,
+          0,
+          canvasRef.current.width,
+          canvasRef.current.height
+        );
+        canvasCtx.drawImage(
+          videoRef.current,
+          0,
+          0,
+          canvasRef.current.width,
+          canvasRef.current.height
+        );
 
-    const camera = new window.Camera(videoRef.current, {
-      onFrame: async () => {
-        await faceMesh.send({ image: videoRef.current });
-      },
-      width: 640,
-      height: 480,
-    });
+        if (detections.faceLandmarks) {
+          for (const landmarks of detections.faceLandmarks) {
+            drawUtils.drawConnectors(
+              landmarks,
+              FaceLandmarker.FACE_LANDMARKS_TESSELATION,
+              {
+                color: "#00FF00",
+                lineWidth: 1,
+              }
+            );
+          }
+        }
 
-    camera.start();
+        animationFrameId.current = requestAnimationFrame(detect);
+      };
+
+      detect();
+    };
+
+    (async () => {
+      await initCamera();
+      await loadFaceLandmarker();
+      startDetection();
+    })();
 
     return () => {
-      camera.stop();
+      cancelAnimationFrame(animationFrameId.current);
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      }
     };
   }, []);
 
   return (
-    <div style={{ textAlign: "center", marginTop: "20px" }}>
-      <div
-        style={{
-          position: "relative",
-          width: "640px",
-          height: "480px",
-          margin: "0 auto",
-        }}
-      >
-        <video
-          ref={videoRef}
-          width="640"
-          height="480"
-          autoPlay
-          muted
-          playsInline
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            transform: "scaleX(-1)",
-            zIndex: 1,
-          }}
-        />
-        <canvas
-          ref={canvasRef}
-          width="640"
-          height="480"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            transform: "scaleX(-1)",
-            zIndex: 2,
-          }}
-        />
-      </div>
-      <h2>{direction}</h2>
+    <div>
+      <video ref={videoRef} style={{ display: "none" }} />
+      <canvas
+        ref={canvasRef}
+        width={640}
+        height={480}
+        style={{ border: "1px solid black" }}
+      />
     </div>
   );
 };
 
-export default Camera;
+export default Cam;
